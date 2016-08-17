@@ -115,6 +115,8 @@ _playerSideNum = switch (playerSide) do
 		{
 			case "CfgVehicles":
 			{
+				if ({_weaponClass isKindOf _x} count ["B_Static_Designator_01_weapon_F","O_Static_Designator_02_weapon_F"] > 0) exitWith {}; // allow everyone to buy all static designators
+
 				{
 					_sideCfg = call _x;
 
@@ -143,7 +145,8 @@ _playerSideNum = switch (playerSide) do
 				{
 					case (_isUniform):
 					{
-						if !(player isUniformAllowed _weaponClass) then
+						if !(player isUniformAllowed _weaponClass || // indie exception for NATO jungle ghillie & thermal suit due to BIS not giving a damn
+						     (playerSide == INDEPENDENT && {{_weaponClass == _x} count ["U_B_CTRG_Soldier_F","U_B_T_FullGhillie_tna_F"] > 0})) then
 						{
 							_showItem = false;
 						};

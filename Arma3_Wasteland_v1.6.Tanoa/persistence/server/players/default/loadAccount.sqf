@@ -4,8 +4,8 @@
 //	@file Name: loadAccount.sqf
 //	@file Author: AgentRev
 
-private ["_UID", "_data", "_saveValid", "_getValue"];
-_UID = _this;
+params ["_UID", "_player"];
+private ["_data", "_saveValid", "_getValue"];
 
 if !((_UID call PDB_playerFileName) call PDB_exists) exitWith { [] }; // iniDB_exists
 

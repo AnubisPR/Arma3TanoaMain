@@ -6,40 +6,24 @@
 
 if (!isServer) exitWith {};
 
-private ["_UID", "_bank", "_moneySaving", "_crossMap", "_environment", "_result", "_data", "_location", "_dataTemp", "_ghostingTimer", "_secs", "_columns", "_pvar", "_pvarG"];
-_UID = _this;
+params ["_UID", "_player"];
+private ["_result", "_data", "_location", "_dataTemp", "_ghostingTimer", "_secs", "_columns", "_pvar", "_pvarG"];
 
-_bank = 0;
-_moneySaving = ["A3W_moneySaving"] call isConfigOn;
-_crossMap = ["A3W_extDB_playerSaveCrossMap"] call isConfigOn;
-_environment = ["A3W_extDB_Environment", "normal"] call getPublicVar;
+private _moneySaving = ["A3W_moneySaving"] call isConfigOn;
+private _crossMap = ["A3W_extDB_playerSaveCrossMap"] call isConfigOn;
+private _environment = ["A3W_extDB_Environment", "normal"] call getPublicVar;
+private _mapID = call A3W_extDB_MapID;
 
-if (_moneySaving) then
-{
-	_result = ["getPlayerBankMoney:" + _UID, 2] call extDB_Database_async;
-
-	if (count _result > 0) then
-	{
-		_bank = _result select 0;
-	};
-};
-
-_result = if (_crossMap) then
-{
-	([format ["checkPlayerSaveXMap:%1:%2", _UID, _environment], 2] call extDB_Database_async) select 0
-}
-else
-{
-	([format ["checkPlayerSave:%1:%2", _UID, call A3W_extDB_MapID], 2] call extDB_Database_async) select 0
-};
+private _query = [["checkPlayerSave", _UID, _mapID], ["checkPlayerSaveXMap", _UID, _environment]] select _crossMap;
+_result = ([_query, 2] call extDB_Database_async) param [0,false];
 
 if (!_result) then
 {
-	_data =
-	[
-		["PlayerSaveValid", false],
-		["BankMoney", _bank]
-	];
+	_data = [["PlayerSaveValid", false]/*, ["BankMoney", _bank]*/];
+
+	// prevent constraint fail on first save
+	private _sqlValues = [[["Name", name _player]], [0,1], false] call extDB_pairsToSQL;
+	[["insertOrUpdatePlayerInfo", _UID, _sqlValues select 0, _sqlValues select 1]] call extDB_Database_async;
 }
 else
 {
@@ -99,28 +83,19 @@ else
 		_data pushBack "Money";
 	};
 
-	_result = if (_crossMap) then
-	{
-		[format ["getPlayerSaveXMap:%1:%2:%3", _UID, _environment, _data joinString ","], 2] call extDB_Database_async;
-	}
-	else
-	{
-		[format ["getPlayerSave:%1:%2:%3", _UID, call A3W_extDB_MapID, _data joinString ","], 2] call extDB_Database_async;
-	};
+	_query = [["getPlayerSave", _UID, _mapID], ["getPlayerSaveXMap", _UID, _environment]] select _crossMap;
+	_query pushBack (_data joinString ",");
+	_result = [_query, 2] call extDB_Database_async;
 
-	{
-		_data set [_forEachIndex, [_data select _forEachIndex, _x]];
-	} forEach _result;
+	{ _data set [_forEachIndex, [_data select _forEachIndex, _x]] } forEach _result;
 
 	if (_crossMap) then
 	{
-		_result = [format ["getPlayerSave:%1:%2:%3", _UID, call A3W_extDB_MapID, _location joinString ","], 2] call extDB_Database_async;
+		_result = [["getPlayerSave", _UID, _mapID, _location joinString ","], 2] call extDB_Database_async;
 
 		if (count _result == count _location) then
 		{
-			{
-				_location set [_forEachIndex, [_location select _forEachIndex, _x]];
-			} forEach _result;
+			{ _location set [_forEachIndex, [_location select _forEachIndex, _x]] } forEach _result;
 
 			_data append _location;
 		};
@@ -133,14 +108,9 @@ else
 
 	if (_ghostingTimer > 0) then
 	{
-		_result = if (_crossMap) then
-		{
-			[format ["getTimeSinceServerSwitchXMap:%1:%2:%3", _UID, _environment, call A3W_extDB_ServerID], 2] call extDB_Database_async
-		}
-		else
-		{
-			[format ["getTimeSinceServerSwitch:%1:%2:%3", _UID, call A3W_extDB_MapID, call A3W_extDB_ServerID], 2] call extDB_Database_async
-		};
+		_query = [["getTimeSinceServerSwitch", _UID, _mapID], ["getTimeSinceServerSwitchXMap", _UID, _environment]] select _crossMap;
+		_query pushBack call A3W_extDB_ServerID;
+		_result = [_query, 2] call extDB_Database_async;
 
 		if (count _result > 0) then
 		{
@@ -154,14 +124,31 @@ else
 	};
 
 	_data append _dataTemp;
-	_data pushBack ["BankMoney", _bank];
+	//_data pushBack ["BankMoney", _bank];
+};
+
+private _bank = 0;
+
+if (_moneySaving) then
+{
+	_result = ["getPlayerBankMoney:" + _UID, 2] call extDB_Database_async;
+
+	_bank = _result param [0,0];
+};
+
+
+_data append
+[
+	["BankMoney", _bank],
+];
+
 };
 
 // before returning player data, restore global player stats if applicable
 if (["A3W_playerStatsGlobal"] call isConfigOn) then
 {
 	_columns = ["playerKills", "aiKills", "teamKills", "deathCount", "reviveCount", "captureCount"];
-	_result = [format ["getPlayerStats:%1:%2", _UID, _columns joinString ","], 2] call extDB_Database_async;
+	_result = [["getPlayerStats", _UID, _columns joinString ","], 2] call extDB_Database_async;
 
 	{
 		_pvar = format ["A3W_playerScore_%1_%2", _columns select _forEachIndex, _UID];

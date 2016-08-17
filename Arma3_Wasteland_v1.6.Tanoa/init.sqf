@@ -28,6 +28,11 @@ X_Server = false;
 X_Client = false;
 X_JIP = false;
 
+CHVD_allowNoGrass = false;
+CHVD_allowTerrain = false; // terrain option has been disabled out from the menu due to terrible code, this variable has currently no effect
+CHVD_maxView = 3000; // Set maximum view distance (default: 12000)
+CHVD_maxObj = 3000; // Set maximimum object view distance (default: 12000)
+
 // versionName = ""; // Set in STR_WL_WelcomeToWasteland in stringtable.xml
 
 if (isServer) then { X_Server = true };
@@ -90,7 +95,7 @@ if (hasInterface || isServer) then
 	[] execVM "addons\proving_ground\init.sqf";
 	[] execVM "addons\HvT\HvT.sqf";
 	[] execVM "addons\JumpMF\init.sqf";
-	[] execVM "addons\outlw_magRepack\MagRepack_init.sqf";
+	[] execVM "addons\outlw_magrepack\MagRepack_init.sqf";
 	[] execVM "addons\lsd_nvg\init.sqf";
 	[] execVM "addons\laptop\init.sqf";
 	[] execVM "addons\stickyCharges\init.sqf";

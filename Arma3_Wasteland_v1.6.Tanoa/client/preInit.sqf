@@ -26,26 +26,15 @@ if (!hasInterface) exitWith {};
 
 	waitUntil
 	{
-		if (!isNull findDisplay 53) exitWith
+		if (getClientStateNumber > 9) exitWith {true};
+
+		if (!isNull findDisplay 53) exitWith // RscDisplayClientGetReady
 		{
 			ctrlActivate (findDisplay 53 displayCtrl 1);
 			findDisplay 53 closeDisplay 1;
 			true
 		};
 
-		getClientStateNumber > 9
+		false
 	};
 };
-
-// Workaround for broken disableChannels, see https://feedback.bistudio.com/T117205
-{
-	_x params [["_chan",-1,[0]], ["_noText","false",[""]], ["_noVoice","false",[""]]];
-
-	_noText = [false,true] select ((["false","true"] find toLower _noText) max 0);
-	_noVoice = [false,true] select ((["false","true"] find toLower _noVoice) max 0);
-
-	_chan enableChannel [!_noText, !_noVoice];
-
-} forEach getArray (missionConfigFile >> "disableChannels");
-
-2 enableChannel false; // force disable command channel
